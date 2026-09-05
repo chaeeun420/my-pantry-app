@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>맞춤형 5층 팬트리 수납 정리함</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+    body { background-color: #f0f2f5; color: #333; padding: 20px; max-width: 1100px; margin: 0 auto; }
+    h1 { text-align: center; margin-bottom: 25px; color: #1a202c; }
+
+    .container { display: flex; gap: 20px; flex-wrap: wrap; }
+    .form-card { flex: 1; min-width: 300px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); height: fit-content; }
+    .pantry-container { flex: 2.5; min-width: 340px; display: flex; flex-direction: column; gap: 15px; }
+
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 6px; font-weight: bold; color: #4a5568; font-size: 14px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #cbd5e0; border-radius: 6px; font-size: 14px; }
+    button { width: 100%; padding: 12px; background-color: #3182ce; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { background-color: #2b6cb0; }
+
+    /* 층별 디자인 */
+    .floor { background: white; border-radius: 10px; padding: 15px; border-left: 6px solid #4a5568; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    .floor-5 { border-color: #805ad5; }
+    .floor-4 { border-color: #dd6b20; }
+    .floor-3 { border-color: #e53e3e; }
+    .floor-2 { border-color: #319795; }
+    .floor-1 { border-color: #718096; }
+
+    .floor-header { font-weight: bold; font-size: 16px; margin-bottom: 10px; color: #2d3748; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #edf2f7; padding-bottom: 6px; }
+
+    /* 칸(섹션) 분할 그리드 */
+    .sections-grid { display: grid; gap: 10px; margin-top: 10px; }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-1 { grid-template-columns: 1fr; }
+
+    @media (max-width: 600px) {
+      .grid-3, .grid-2 { grid-template-columns: 1fr; }
+    }
+
+    .section-box { background: #f7fafc; border: 1px dashed #cbd5e0; border-radius: 8px; padding: 10px; min-height: 80px; }
+    .section-label-input { width: 100%; border: none; background: transparent; font-size: 12px; font-weight: bold; color: #718096; margin-bottom: 8px; outline: none; border-bottom: 1px dotted #cbd5e0; padding-bottom: 2px; }
+    .section-label-input:focus { border-bottom-color: #3182ce; color: #2b6cb0; }
+
+    /* 물건 태그 */
+    .item-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+    .item-tag { background: #e2e8f0; color: #2d3748; padding: 4px 10px; border-radius: 15px; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+    .delete-btn { color: #e53e3e; cursor: pointer; font-weight: bold; font-size: 15px; border: none; background: none; }
+    .empty-text { color: #a0aec0; font-size: 12px; font-style: italic; }
+  </style>
+</head>
+<body>
+
+  <h1>📦 맞춤형 5층 팬트리 수납함</h1>
+
+  <div class="container">
+    <!-- 물건 추가 폼 -->
+    <div class="form-card">
+      <h2 style="font-size:18px; margin-bottom:15px;">물건 넣기</h2>
+      <div class="form-group">
+        <label for="itemName">물건 이름</label>
+        <input type="text" id="itemName" placeholder="예: 햇반, 통조림, 종이컵">
+      </div>
+      <div class="form-group">
+        <label for="sectionSelect">넣을 위치 선택</label>
+        <select id="sectionSelect">
+          <!-- 스크립트로 위치 목록 자동 생성 -->
+        </select>
+      </div>
+      <button onclick="addItem()">팬트리에 넣기</button>
+    </div>
+
+    <!-- 팬트리 전체 구조 -->
+    <div class="pantry-container" id="pantry"></div>
+  </div>
+
+  <script>
+    // 구역(칸) 구조 정의
+    const sectionsConfig = [
+      { id: 'f5_box', floor: 5, name: '5층 - 박스 수납 공간' },
+      { id: 'f4_box1', floor: 4, name: '4층 - 수납함 A' },
+      { id: 'f4_box2', floor: 4, name: '4층 - 수납함 B' },
+      { id: 'f4_box3', floor: 4, name: '4층 - 수납함 C' },
+      { id: 'f3_af', floor: 3, name: '3층 - 에어프라이어 전용 공간' },
+      { id: 'f3_box1', floor: 3, name: '3층 - 수납함 A' },
+      { id: 'f3_box2', floor: 3, name: '3층 - 수납함 B' },
+      { id: 'f3_box3', floor: 3, name: '3층 - 수납함 C' },
+      { id: 'f2_drawer1', floor: 2, name: '2층 - 서랍 (왼쪽)' },
+      { id: 'f2_drawer2', floor: 2, name: '2층 - 서랍 (가운데)' },
+      { id: 'f2_drawer3', floor: 2, name: '2층 - 서랍 (오른쪽)' },
+      { id: 'f1_space', floor: 1, name: '1층 - 맨 아래 공간' }
+    ];
+
+    // 저장된 데이터 불러오기
+    let items = JSON.parse(localStorage.getItem('pantryItems_v2')) || [];
+    let sectionLabels = JSON.parse(localStorage.getItem('pantryLabels_v2')) || {};
+
+    // 셀렉트 박스 옵션 생성
+    function initSelectOptions() {
+      const select = document.getElementById('sectionSelect');
+      select.innerHTML = '';
+      sectionsConfig.forEach(sec => {
+        const opt = document.createElement('option');
+        opt.value = sec.id;
+        opt.textContent = sec.name;
+        select.appendChild(opt);
+      });
+    }
+
+    // 분류 라벨 변경 저장
+    function updateLabel(sectionId, value) {
+      sectionLabels[sectionId] = value;
+      localStorage.setItem('pantryLabels_v2', JSON.stringify(sectionLabels));
+    }
+
+    // 팬트리 화면 그리기
+    function renderPantry() {
+      const pantry = document.getElementById('pantry');
+      pantry.innerHTML = '';
+
+      // 층별 템플릿 생성
+      const floors = [
+        { level: 5, title: '5층 (맨 위 - 박스 공간)', class: 'floor-5', grid: 'grid-1', ids: ['f5_box'] },
+        { level: 4, title: '4층 (수납함 3개)', class: 'floor-4', grid: 'grid-3', ids: ['f4_box1', 'f4_box2', 'f4_box3'] },
+        { level: 3, title: '3층 (에어프라이어 + 수납함 3개)', class: 'floor-3', grid: 'grid-2', ids: ['f3_af', 'f3_box1', 'f3_box2', 'f3_box3'] },
+        { level: 2, title: '2층 (서랍형 3칸)', class: 'floor-2', grid: 'grid-3', ids: ['f2_drawer1', 'f2_drawer2', 'f2_drawer3'] },
+        { level: 1, title: '1층 (맨 아래)', class: 'floor-1', grid: 'grid-1', ids: ['f1_space'] }
+      ];
+
+      floors.forEach(f => {
+        const floorDiv = document.createElement('div');
+        floorDiv.className = `floor ${f.class}`;
+
+        let boxesHTML = '';
+        f.ids.forEach(secId => {
+          const config = sectionsConfig.find(s => s.id === secId);
+          const defaultLabel = sectionLabels[secId] !== undefined ? sectionLabels[secId] : config.name.split(' - ')[1];
+          const secItems = items.filter(item => item.sectionId === secId);
+
+          let tags = secItems.length === 0 
+            ? '<span class="empty-text">비어 있음</span>' 
+            : secItems.map(item => `
+                <div class="item-tag">
+                  ${item.name}
+                  <button class="delete-btn" onclick="deleteItem(${item.id})">&times;</button>
+                </div>
+              `).join('');
+
+          boxesHTML += `
+            <div class="section-box">
+              <input type="text" class="section-label-input" 
+                     value="${defaultLabel}" 
+                     placeholder="분류 명칭 입력..." 
+                     onchange="updateLabel('${secId}', this.value)">
+              <div class="item-tags">${tags}</div>
+            </div>
+          `;
+        });
+
+        // 3층 특별 레이아웃 처리 (에어프라이어 공간과 수납함 3개 구분)
+        if(f.level === 3) {
+          const afConfig = sectionsConfig.find(s => s.id === 'f3_af');
+          const afLabel = sectionLabels['f3_af'] !== undefined ? sectionLabels['f3_af'] : '에어프라이어 전용 공간';
+          const afItems = items.filter(item => item.sectionId === 'f3_af');
+          
+          let afTags = afItems.length === 0 
+            ? '<span class="empty-text">비어 있음</span>' 
+            : afItems.map(item => `<div class="item-tag">${item.name}<button class="delete-btn" onclick="deleteItem(${item.id})">&times;</button></div>`).join('');
+
+          let boxItemsHTML = ['f3_box1', 'f3_box2', 'f3_box3'].map(secId => {
+            const config = sectionsConfig.find(s => s.id === secId);
+            const defaultLabel = sectionLabels[secId] !== undefined ? sectionLabels[secId] : config.name.split(' - ')[1];
+            const secItems = items.filter(item => item.sectionId === secId);
+            let tags = secItems.length === 0 ? '<span class="empty-text">비어 있음</span>' : secItems.map(item => `<div class="item-tag">${item.name}<button class="delete-btn" onclick="deleteItem(${item.id})">&times;</button></div>`).join('');
+            
+            return `
+              <div class="section-box">
+                <input type="text" class="section-label-input" value="${defaultLabel}" onchange="updateLabel('${secId}', this.value)">
+                <div class="item-tags">${tags}</div>
+              </div>
+            `;
+          }).join('');
+
+          boxesHTML = `
+            <div class="sections-grid grid-2">
+              <div class="section-box" style="background:#fff5f5; border-color:#feb2b2;">
+                <input type="text" class="section-label-input" value="${afLabel}" onchange="updateLabel('f3_af', this.value)">
+                <div class="item-tags">${afTags}</div>
+              </div>
+              <div style="display:flex; flex-direction:column; gap:8px;">
+                ${boxItemsHTML}
+              </div>
+            </div>
+          `;
+        } else {
+          boxesHTML = `<div class="sections-grid ${f.grid}">${boxesHTML}</div>`;
+        }
+
+        floorDiv.innerHTML = `
+          <div class="floor-header">
+            <span>${f.title}</span>
+          </div>
+          ${boxesHTML}
+        `;
+
+        pantry.appendChild(floorDiv);
+      });
+    }
+
+    // 물건 추가
+    function addItem() {
+      const nameInput = document.getElementById('itemName');
+      const sectionSelect = document.getElementById('sectionSelect');
+      
+      const name = nameInput.value.trim();
+      const sectionId = sectionSelect.value;
+
+      if (!name) {
+        alert('물건 이름을 입력해주세요!');
+        return;
+      }
+
+      const newItem = {
+        id: Date.now(),
+        name: name,
+        sectionId: sectionId
+      };
+
+      items.push(newItem);
+      saveAndRender();
+      nameInput.value = '';
+    }
+
+    // 물건 삭제
+    function deleteItem(id) {
+      items = items.filter(item => item.id !== id);
+      saveAndRender();
+    }
+
+    // 저장 및 다시 그리기
+    function saveAndRender() {
+      localStorage.setItem('pantryItems_v2', JSON.stringify(items));
+      renderPantry();
+    }
+
+    // 초기화
+    initSelectOptions();
+    renderPantry();
+  </script>
+</body>
+</html>
